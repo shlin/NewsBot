@@ -7,11 +7,21 @@ package com.appledaily.gui;
 
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.IOException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.SimpleDateFormat;
+import java.util.HashSet;
+import java.util.UUID;
 
 import javax.swing.JOptionPane;
 
-import com.appledaily.bot.AppledailyBot;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 
 import jdbc.mysql.MySQLConnector;
 
@@ -25,12 +35,13 @@ public class AppWindow extends javax.swing.JFrame {
 	 */
 	private static final long serialVersionUID = 8194173309944752384L;
 	private MySQLConnector connector;
-	private AppledailyBot bot;
+	private HashSet<String> guidSet;
 
 	/**
 	 * Creates new form AppWindow
 	 */
 	public AppWindow() {
+		this.guidSet = new HashSet<String>();
 		initComponents();
 	}
 
@@ -68,7 +79,30 @@ public class AppWindow extends javax.swing.JFrame {
 						textMysqlPassword.setEnabled(false);
 						textMysqlDatabase.setEnabled(false);
 						btnMysqlConnect.setEnabled(false);
-						JOptionPane.showMessageDialog(null, "資料庫連線成功！", "訊息", JOptionPane.INFORMATION_MESSAGE);
+
+						try {
+							ResultSet rs;
+							Statement stat = conn.createStatement();
+
+							// create table when table is not exist.
+							stat.execute("CREATE TABLE IF NOT EXISTS `APPLEDAILY` (`ID` INT NOT NULL AUTO_INCREMENT,"
+									+ "`URL_GUID` VARCHAR(40) NOT NULL," + "`URL` TEXT NOT NULL,"
+									+ "`DATE` VARCHAR(8) NOT NULL," + "`TITLE` TEXT NOT NULL," + "`CONTENT` TEXT NULL,"
+									+ "`KEYWORD` TEXT NULL," + "PRIMARY KEY (`ID`, `URL_GUID`),"
+									+ "UNIQUE INDEX `ID_UNIQUE` (`ID` ASC),"
+									+ "UNIQUE INDEX `URL_GUID_UNIQUE` (`URL_GUID` ASC)) CHARACTER SET utf8, COLLATE utf8_general_ci;");
+
+							// query GUID list of news
+							rs = stat.executeQuery("SELECT `URL_GUID` FROM `APPLEDAILY`");
+							while (rs.next()) {
+								guidSet.add(rs.getString(1));
+							}
+
+							JOptionPane.showMessageDialog(null, "資料庫連線成功！", "訊息", JOptionPane.INFORMATION_MESSAGE);
+						} catch (SQLException e1) {
+							JOptionPane.showMessageDialog(null, "資料庫連線失敗！", "錯誤", JOptionPane.ERROR_MESSAGE);
+						}
+
 					} else {
 						JOptionPane.showMessageDialog(null, "資料庫連線失敗！", "錯誤", JOptionPane.ERROR_MESSAGE);
 					}
@@ -80,12 +114,55 @@ public class AppWindow extends javax.swing.JFrame {
 		jPanel2 = new javax.swing.JPanel();
 		jLabel1 = new javax.swing.JLabel();
 		textSearchKeyword = new javax.swing.JTextField();
-		jButton1 = new javax.swing.JButton();
-		jButton1.addMouseListener(new MouseAdapter() {
+		btnSearch = new javax.swing.JButton();
+		btnSearch.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-			
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
+				String strSdate = sdf.format(datetimeStart.getValue());
+				String strEdate = sdf.format(datetimeEnd.getValue());
+
+				// first search step.
+				org.jsoup.Connection firstConn;
+				Document firstDoc;
+				firstConn = Jsoup.connect("http://search.appledaily.com.tw/appledaily/search");
+				firstConn.data("searchMode", "Adv").data("searchType", "text").data("select", "AND");
+				firstConn.data("querystrA", textSearchKeyword.getText()).data("sdate", strSdate).data("edate",
+						strEdate);
+
+				try {
+					PreparedStatement stat = connector.getConnection().prepareStatement(
+							"INSERT INTO `APPLEDAILY`(`URL_GUID`, `URL`, `DATE`, `TITLE`, `CONTENT`, `NULL`) VALUES(?, ?, ?, ?, ?, ?)");
+					firstDoc = firstConn.post();
+
+					btnSearch.setEnabled(false);
+					for (Element link : firstDoc.select("#result>li")) {
+						String strUrl = link.select("h2 a").first().absUrl("href");
+						String strGUID = UUID.nameUUIDFromBytes(strUrl.getBytes()).toString();
+
+						if (!guidSet.contains(strGUID)) {
+							Document newsDoc = Jsoup.connect(strUrl).get();
+
+							stat.setString(1, strGUID);
+							stat.setString(2, strUrl);
+							stat.setString(3, link.select("time").text());
+							stat.setString(4, link.select("h2 a").text().trim());
+							stat.setString(5, newsDoc.body().text().trim());
+							stat.setString(6, textSearchKeyword.getText());
+
+							stat.executeUpdate();
+
+							Thread.sleep(500);
+							guidSet.add(strGUID);
+						}
+					}
+
+					JOptionPane.showMessageDialog(null, "資料下載完成！", "訊息", JOptionPane.INFORMATION_MESSAGE);
+				} catch (IOException | InterruptedException | SQLException e1) {
+					e1.printStackTrace();
+					JOptionPane.showMessageDialog(null, "搜尋過程發生錯誤", "錯誤", JOptionPane.ERROR_MESSAGE);
+				}
 			}
 		});
 		jLabel6 = new javax.swing.JLabel();
@@ -152,7 +229,7 @@ public class AppWindow extends javax.swing.JFrame {
 
 		jLabel1.setText("搜尋關鍵字：");
 
-		jButton1.setText("搜尋");
+		btnSearch.setText("搜尋");
 
 		jLabel6.setText("時間區間-開始時間：");
 
@@ -167,8 +244,10 @@ public class AppWindow extends javax.swing.JFrame {
 		progressStatus.setToolTipText("");
 		progressStatus.setValue(50);
 		progressStatus.setStringPainted(true);
+		progressStatus.setVisible(false);
 
 		jLabel8.setText("寫入資料庫-完成進度：");
+		jLabel8.setVisible(false);
 
 		javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
 		jPanel2.setLayout(jPanel2Layout);
@@ -183,7 +262,7 @@ public class AppWindow extends javax.swing.JFrame {
 												.addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
 												.addComponent(textSearchKeyword, javax.swing.GroupLayout.PREFERRED_SIZE,
 														200, javax.swing.GroupLayout.PREFERRED_SIZE)
-												.addGap(9, 9, 9).addComponent(jButton1))
+												.addGap(9, 9, 9).addComponent(btnSearch))
 										.addGroup(jPanel2Layout.createSequentialGroup().addGroup(jPanel2Layout
 												.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
 												.addComponent(jLabel8)
@@ -209,7 +288,7 @@ public class AppWindow extends javax.swing.JFrame {
 								.addComponent(jLabel1)
 								.addComponent(textSearchKeyword, javax.swing.GroupLayout.PREFERRED_SIZE,
 										javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-								.addComponent(jButton1))
+								.addComponent(btnSearch))
 						.addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
 						.addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
 								.addComponent(jLabel6).addComponent(datetimeStart,
@@ -288,7 +367,7 @@ public class AppWindow extends javax.swing.JFrame {
 	private javax.swing.JButton btnMysqlConnect;
 	private javax.swing.JSpinner datetimeEnd;
 	private javax.swing.JSpinner datetimeStart;
-	private javax.swing.JButton jButton1;
+	private javax.swing.JButton btnSearch;
 	private javax.swing.JLabel jLabel1;
 	private javax.swing.JLabel jLabel2;
 	private javax.swing.JLabel jLabel3;

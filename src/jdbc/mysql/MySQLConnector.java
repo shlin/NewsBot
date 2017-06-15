@@ -51,14 +51,15 @@ public class MySQLConnector implements IMySQLConnector {
 	}
 
 	private void initConnection() {
-		this.strConnectionUrl = String.format("jdbc:mysql://%s:3306/%s", this.strHost, this.strDatabase);
+		this.strConnectionUrl = String.format("jdbc:mysql://%s:3306/%s?useUnicode=true&characterEncoding=utf8",
+				this.strHost, this.strDatabase);
 
 		try {
 			this.initDriver();
 			this.conn = DriverManager.getConnection(this.strConnectionUrl, this.strUsername, this.strPassword);
 			// if (this.conn != null && !this.conn.isClosed())
 			// System.out.println("資料庫連線成功！");
-			
+
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
