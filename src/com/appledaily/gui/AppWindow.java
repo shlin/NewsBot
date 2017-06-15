@@ -57,14 +57,21 @@ public class AppWindow extends javax.swing.JFrame {
 			public void mouseClicked(MouseEvent e) {
 				Connection conn;
 
-				connector = new MySQLConnector(textMysqlHost.getText(), textMysqlAccount.getText(),
-						String.valueOf(textMysqlPassword.getPassword()), textMysqlDatabase.getText());
-				conn = connector.getConnection();
+				if (btnMysqlConnect.isEnabled()) {
+					connector = new MySQLConnector(textMysqlHost.getText(), textMysqlAccount.getText(),
+							String.valueOf(textMysqlPassword.getPassword()), textMysqlDatabase.getText());
+					conn = connector.getConnection();
 
-				if (conn != null) {
-					JOptionPane.showMessageDialog(null, "資料庫連線成功！", "訊息", JOptionPane.INFORMATION_MESSAGE);
-				} else {
-					JOptionPane.showMessageDialog(null, "資料庫連線失敗！", "錯誤", JOptionPane.ERROR_MESSAGE);
+					if (conn != null) {
+						textMysqlHost.setEnabled(false);
+						textMysqlAccount.setEnabled(false);
+						textMysqlPassword.setEnabled(false);
+						textMysqlDatabase.setEnabled(false);
+						btnMysqlConnect.setEnabled(false);
+						JOptionPane.showMessageDialog(null, "資料庫連線成功！", "訊息", JOptionPane.INFORMATION_MESSAGE);
+					} else {
+						JOptionPane.showMessageDialog(null, "資料庫連線失敗！", "錯誤", JOptionPane.ERROR_MESSAGE);
+					}
 				}
 			}
 		});
@@ -77,6 +84,7 @@ public class AppWindow extends javax.swing.JFrame {
 		jButton1.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
+			
 
 			}
 		});
