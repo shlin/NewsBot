@@ -118,30 +118,36 @@ public class AppWindow extends javax.swing.JFrame {
 		btnSearch.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
+				HashSet<String> completeSet = new HashSet<String>();
 				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
+				String strSearchUrl = "http://search.appledaily.com.tw/appledaily/search";
 				String strSdate = sdf.format(datetimeStart.getValue());
 				String strEdate = sdf.format(datetimeEnd.getValue());
 
 				// first search step.
 				org.jsoup.Connection firstConn;
 				Document firstDoc;
-				firstConn = Jsoup.connect("http://search.appledaily.com.tw/appledaily/search");
+				firstConn = Jsoup.connect(strSearchUrl);
 				firstConn.data("searchMode", "Adv").data("searchType", "text").data("select", "AND");
 				firstConn.data("querystrA", textSearchKeyword.getText()).data("sdate", strSdate).data("edate",
 						strEdate);
 
 				try {
 					PreparedStatement stat = connector.getConnection().prepareStatement(
-							"INSERT INTO `APPLEDAILY`(`URL_GUID`, `URL`, `DATE`, `TITLE`, `CONTENT`, `NULL`) VALUES(?, ?, ?, ?, ?, ?)");
+							"INSERT INTO `APPLEDAILY`(`URL_GUID`, `URL`, `DATE`, `TITLE`, `CONTENT`, `KEYWORD`) VALUES(?, ?, ?, ?, ?, ?)");
 					firstDoc = firstConn.post();
 
+					progressStatus.setMaximum(
+							Integer.parseInt(firstDoc.select("#pageNumberSubmit input[name=totalpage]").first().val()));
+					progressStatus.setStringPainted(true);
 					btnSearch.setEnabled(false);
 					for (Element link : firstDoc.select("#result>li")) {
 						String strUrl = link.select("h2 a").first().absUrl("href");
 						String strGUID = UUID.nameUUIDFromBytes(strUrl.getBytes()).toString();
 
 						if (!guidSet.contains(strGUID)) {
+							Thread.sleep(500);
 							Document newsDoc = Jsoup.connect(strUrl).get();
 
 							stat.setString(1, strGUID);
@@ -152,13 +158,51 @@ public class AppWindow extends javax.swing.JFrame {
 							stat.setString(6, textSearchKeyword.getText());
 
 							stat.executeUpdate();
-
-							Thread.sleep(500);
 							guidSet.add(strGUID);
+						}
+
+						completeSet.add(strGUID);
+						progressStatus.setValue(completeSet.size());
+						System.out.println(completeSet.size());
+					}
+
+					int pageIndex = 2;
+					Document resultPageDoc = firstDoc;
+					while (resultPageDoc.select("#pageNumberSubmit ol#result>li").size() == 10) {
+						org.jsoup.Connection pageConn = Jsoup.connect(strSearchUrl);
+						resultPageDoc.select("#pageNumberSubmit input")
+								.forEach(input -> pageConn.data(input.attr("name"), input.val()));
+						pageConn.data("page", Integer.toString(pageIndex++));
+
+						resultPageDoc = pageConn.post();
+
+						for (Element link : resultPageDoc.select("#result>li")) {
+							String strUrl = link.select("h2 a").first().absUrl("href");
+							String strGUID = UUID.nameUUIDFromBytes(strUrl.getBytes()).toString();
+
+							if (!guidSet.contains(strGUID)) {
+								Thread.sleep(500);
+								Document newsDoc = Jsoup.connect(strUrl).get();
+
+								stat.setString(1, strGUID);
+								stat.setString(2, strUrl);
+								stat.setString(3, link.select("time").text());
+								stat.setString(4, link.select("h2 a").text().trim());
+								stat.setString(5, newsDoc.body().text().trim());
+								stat.setString(6, textSearchKeyword.getText());
+
+								stat.executeUpdate();
+								guidSet.add(strGUID);
+							}
+
+							completeSet.add(strGUID);
+							progressStatus.setValue(completeSet.size());
+							System.out.println(completeSet.size());
 						}
 					}
 
 					JOptionPane.showMessageDialog(null, "資料下載完成！", "訊息", JOptionPane.INFORMATION_MESSAGE);
+					stat.close();
 				} catch (IOException | InterruptedException | SQLException e1) {
 					e1.printStackTrace();
 					JOptionPane.showMessageDialog(null, "搜尋過程發生錯誤", "錯誤", JOptionPane.ERROR_MESSAGE);
@@ -242,12 +286,10 @@ public class AppWindow extends javax.swing.JFrame {
 				java.util.Calendar.DAY_OF_MONTH));
 
 		progressStatus.setToolTipText("");
-		progressStatus.setValue(50);
+		progressStatus.setValue(0);
 		progressStatus.setStringPainted(true);
-		progressStatus.setVisible(false);
 
 		jLabel8.setText("寫入資料庫-完成進度：");
-		jLabel8.setVisible(false);
 
 		javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
 		jPanel2.setLayout(jPanel2Layout);
