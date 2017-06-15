@@ -11,6 +11,8 @@ import java.sql.Connection;
 
 import javax.swing.JOptionPane;
 
+import com.appledaily.bot.AppledailyBot;
+
 import jdbc.mysql.MySQLConnector;
 
 /**
@@ -23,6 +25,7 @@ public class AppWindow extends javax.swing.JFrame {
 	 */
 	private static final long serialVersionUID = 8194173309944752384L;
 	private MySQLConnector connector;
+	private AppledailyBot bot;
 
 	/**
 	 * Creates new form AppWindow
@@ -71,6 +74,12 @@ public class AppWindow extends javax.swing.JFrame {
 		jLabel1 = new javax.swing.JLabel();
 		textSearchKeyword = new javax.swing.JTextField();
 		jButton1 = new javax.swing.JButton();
+		jButton1.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+
+			}
+		});
 		jLabel6 = new javax.swing.JLabel();
 		jLabel7 = new javax.swing.JLabel();
 		datetimeStart = new javax.swing.JSpinner();
@@ -91,18 +100,6 @@ public class AppWindow extends javax.swing.JFrame {
 		jLabel4.setText("登入密碼：");
 
 		jLabel5.setText("資料庫名稱：");
-
-		textMysqlHost.addActionListener(new java.awt.event.ActionListener() {
-			public void actionPerformed(java.awt.event.ActionEvent evt) {
-				textMysqlHostActionPerformed(evt);
-			}
-		});
-
-		textMysqlAccount.addActionListener(new java.awt.event.ActionListener() {
-			public void actionPerformed(java.awt.event.ActionEvent evt) {
-				textMysqlAccountActionPerformed(evt);
-			}
-		});
 
 		btnMysqlConnect.setText("連線");
 
@@ -238,14 +235,6 @@ public class AppWindow extends javax.swing.JFrame {
 
 		pack();
 	}// </editor-fold>//GEN-END:initComponents
-
-	private void textMysqlHostActionPerformed(java.awt.event.ActionEvent evt) {// GEN-FIRST:event_textMysqlHostActionPerformed
-		// TODO add your handling code here:
-	}// GEN-LAST:event_textMysqlHostActionPerformed
-
-	private void textMysqlAccountActionPerformed(java.awt.event.ActionEvent evt) {// GEN-FIRST:event_textMysqlAccountActionPerformed
-		// TODO add your handling code here:
-	}// GEN-LAST:event_textMysqlAccountActionPerformed
 
 	/**
 	 * @param args
