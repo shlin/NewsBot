@@ -98,7 +98,8 @@ public class AppWindow extends javax.swing.JFrame {
 					org.jsoup.Connection firstConn;
 					Document firstDoc;
 					firstConn = Jsoup.connect(strSearchUrl)
-							.timeout(Integer.parseInt(sleeptime.getValue().toString()) * 1000);
+							.timeout(Integer.parseInt(sleeptime.getValue().toString()) * 1000 <= 5000 ? 5000
+									: Integer.parseInt(sleeptime.getValue().toString()) * 1000);
 					firstConn.data("searchMode", "Adv").data("searchType", "text").data("select", "AND");
 					firstConn.data("querystrA", textSearchKeyword.getText()).data("sdate", strSdate).data("edate",
 							strEdate);
@@ -111,7 +112,7 @@ public class AppWindow extends javax.swing.JFrame {
 						int totalCount = Integer
 								.parseInt(firstDoc.select("#pageNumberSubmit input[name=totalpage]").first().val());
 						progressStatus.setMaximum(totalCount);
-						textTotalCount.setText(String.format("%d", totalCount));
+						textTotalCount.setText(String.format("0 / %d", totalCount));
 
 						btnSearch.setEnabled(false);
 						for (Element link : firstDoc.select("#result>li")) {
@@ -122,11 +123,15 @@ public class AppWindow extends javax.swing.JFrame {
 								Thread.sleep(Integer.parseInt(sleeptime.getValue().toString()) * 1000);
 								Document newsDoc = Jsoup.connect(strUrl).get();
 
+								String strContent = String.format("%s %s",
+										newsDoc.select("article#maincontent div.gggs>time").text(),
+										newsDoc.select("article#maincontent p").text());
+
 								stat.setString(1, strGUID);
 								stat.setString(2, strUrl);
 								stat.setString(3, link.select("time").text());
 								stat.setString(4, link.select("h2 a").text().trim());
-								stat.setString(5, newsDoc.body().text().trim());
+								stat.setString(5, strContent);
 								stat.setString(6, textSearchKeyword.getText());
 
 								stat.executeUpdate();
@@ -135,15 +140,15 @@ public class AppWindow extends javax.swing.JFrame {
 
 							completeSet.add(strGUID);
 							progressStatus.setValue(completeSet.size());
-							// System.out.printf("\r目前進度： %d / %d 篇",
-							// completeSet.size(), totalCount);
+							textTotalCount.setText(String.format("%d / %d", completeSet.size(), totalCount));
 						}
 
 						int pageIndex = 2;
 						Document resultPageDoc = firstDoc;
 						while (resultPageDoc.select("#pageNumberSubmit ol#result>li").size() == 10) {
 							org.jsoup.Connection pageConn = Jsoup.connect(strSearchUrl)
-									.timeout(Integer.parseInt(sleeptime.getValue().toString()) * 1000);
+									.timeout(Integer.parseInt(sleeptime.getValue().toString()) * 1000 <= 5000 ? 5000
+											: Integer.parseInt(sleeptime.getValue().toString()) * 1000);
 							resultPageDoc.select("#pageNumberSubmit input")
 									.forEach(input -> pageConn.data(input.attr("name"), input.val()));
 							pageConn.data("page", Integer.toString(pageIndex++));
@@ -158,11 +163,15 @@ public class AppWindow extends javax.swing.JFrame {
 									Thread.sleep(Integer.parseInt(sleeptime.getValue().toString()) * 1000);
 									Document newsDoc = Jsoup.connect(strUrl).get();
 
+									String strContent = String.format("%s %s",
+											newsDoc.select("article#maincontent div.gggs>time").text(),
+											newsDoc.select("article#maincontent p").text());
+
 									stat.setString(1, strGUID);
 									stat.setString(2, strUrl);
 									stat.setString(3, link.select("time").text());
 									stat.setString(4, link.select("h2 a").text().trim());
-									stat.setString(5, newsDoc.body().text().trim());
+									stat.setString(5, strContent);
 									stat.setString(6, textSearchKeyword.getText());
 
 									stat.executeUpdate();
@@ -171,8 +180,7 @@ public class AppWindow extends javax.swing.JFrame {
 
 								completeSet.add(strGUID);
 								progressStatus.setValue(completeSet.size());
-								// System.out.printf("\r目前進度： %d / %d 篇",
-								// completeSet.size(), totalCount);
+								textTotalCount.setText(String.format("%d / %d", completeSet.size(), totalCount));
 							}
 						}
 
