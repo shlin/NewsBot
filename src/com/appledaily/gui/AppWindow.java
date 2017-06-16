@@ -88,15 +88,15 @@ public class AppWindow extends javax.swing.JFrame {
 							Statement stat = conn.createStatement();
 
 							// create table when table is not exist.
-							stat.execute("CREATE TABLE IF NOT EXISTS `APPLEDAILY` (`ID` INT NOT NULL AUTO_INCREMENT,"
-									+ "`URL_GUID` VARCHAR(40) NOT NULL," + "`URL` TEXT NOT NULL,"
-									+ "`DATE` VARCHAR(8) NOT NULL," + "`TITLE` TEXT NOT NULL," + "`CONTENT` TEXT NULL,"
-									+ "`KEYWORD` TEXT NULL," + "PRIMARY KEY (`ID`, `URL_GUID`),"
-									+ "UNIQUE INDEX `ID_UNIQUE` (`ID` ASC),"
-									+ "UNIQUE INDEX `URL_GUID_UNIQUE` (`URL_GUID` ASC)) CHARACTER SET utf8, COLLATE utf8_general_ci;");
+							stat.execute("CREATE TABLE IF NOT EXISTS `appledaily` (`id` INT NOT NULL AUTO_INCREMENT,"
+									+ "`url_guid` VARCHAR(40) NOT NULL," + "`url` TEXT NOT NULL,"
+									+ "`date` VARCHAR(8) NOT NULL," + "`title` TEXT NOT NULL," + "`content` TEXT NULL,"
+									+ "`keyword` TEXT NULL," + "PRIMARY KEY (`id`, `url_guid`),"
+									+ "UNIQUE INDEX `ID_UNIQUE` (`id` ASC),"
+									+ "UNIQUE INDEX `URL_GUID_UNIQUE` (`url_guid` ASC)) CHARACTER SET utf8, COLLATE utf8_general_ci;");
 
 							// query GUID list of news
-							rs = stat.executeQuery("SELECT `URL_GUID` FROM `APPLEDAILY`");
+							rs = stat.executeQuery("SELECT `url_guid` FROM `appledaily`");
 							while (rs.next()) {
 								guidSet.add(rs.getString(1));
 							}
@@ -119,103 +119,107 @@ public class AppWindow extends javax.swing.JFrame {
 		textSearchKeyword = new javax.swing.JTextField();
 		btnSearch = new javax.swing.JButton();
 
-		Runnable doFetchWork = () -> {
-			HashSet<String> completeSet = new HashSet<String>();
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-
-			String strSearchUrl = "http://search.appledaily.com.tw/appledaily/search";
-			String strSdate = sdf.format(datetimeStart.getValue());
-			String strEdate = sdf.format(datetimeEnd.getValue());
-
-			// first search step.
-			org.jsoup.Connection firstConn;
-			Document firstDoc;
-			firstConn = Jsoup.connect(strSearchUrl);
-			firstConn.data("searchMode", "Adv").data("searchType", "text").data("select", "AND");
-			firstConn.data("querystrA", textSearchKeyword.getText()).data("sdate", strSdate).data("edate", strEdate);
-
-			try {
-				PreparedStatement stat = connector.getConnection().prepareStatement(
-						"INSERT INTO `APPLEDAILY`(`URL_GUID`, `URL`, `DATE`, `TITLE`, `CONTENT`, `KEYWORD`) VALUES(?, ?, ?, ?, ?, ?)");
-				firstDoc = firstConn.post();
-
-				int totalCount = Integer
-						.parseInt(firstDoc.select("#pageNumberSubmit input[name=totalpage]").first().val());
-				progressStatus.setMaximum(totalCount);
-
-				btnSearch.setEnabled(false);
-				for (Element link : firstDoc.select("#result>li")) {
-					String strUrl = link.select("h2 a").first().absUrl("href");
-					String strGUID = UUID.nameUUIDFromBytes(strUrl.getBytes()).toString();
-
-					if (!guidSet.contains(strGUID)) {
-						Thread.sleep(500);
-						Document newsDoc = Jsoup.connect(strUrl).get();
-
-						stat.setString(1, strGUID);
-						stat.setString(2, strUrl);
-						stat.setString(3, link.select("time").text());
-						stat.setString(4, link.select("h2 a").text().trim());
-						stat.setString(5, newsDoc.body().text().trim());
-						stat.setString(6, textSearchKeyword.getText());
-
-						stat.executeUpdate();
-						guidSet.add(strGUID);
-					}
-
-					completeSet.add(strGUID);
-					progressStatus.setValue(completeSet.size());
-					System.out.printf("\r目前進度： %d / %d 篇", completeSet.size(), totalCount);
-				}
-
-				int pageIndex = 2;
-				Document resultPageDoc = firstDoc;
-				while (resultPageDoc.select("#pageNumberSubmit ol#result>li").size() == 10) {
-					org.jsoup.Connection pageConn = Jsoup.connect(strSearchUrl);
-					resultPageDoc.select("#pageNumberSubmit input")
-							.forEach(input -> pageConn.data(input.attr("name"), input.val()));
-					pageConn.data("page", Integer.toString(pageIndex++));
-
-					resultPageDoc = pageConn.post();
-
-					for (Element link : resultPageDoc.select("#result>li")) {
-						String strUrl = link.select("h2 a").first().absUrl("href");
-						String strGUID = UUID.nameUUIDFromBytes(strUrl.getBytes()).toString();
-
-						if (!guidSet.contains(strGUID)) {
-							Thread.sleep(500);
-							Document newsDoc = Jsoup.connect(strUrl).get();
-
-							stat.setString(1, strGUID);
-							stat.setString(2, strUrl);
-							stat.setString(3, link.select("time").text());
-							stat.setString(4, link.select("h2 a").text().trim());
-							stat.setString(5, newsDoc.body().text().trim());
-							stat.setString(6, textSearchKeyword.getText());
-
-							stat.executeUpdate();
-							guidSet.add(strGUID);
-						}
-
-						completeSet.add(strGUID);
-						progressStatus.setValue(completeSet.size());
-						System.out.printf("\r目前進度： %d / %d 篇", completeSet.size(), totalCount);
-					}
-				}
-
-				JOptionPane.showMessageDialog(null, "資料下載完成！", "訊息", JOptionPane.INFORMATION_MESSAGE);
-				stat.close();
-			} catch (IOException | InterruptedException | SQLException e1) {
-				e1.printStackTrace();
-				JOptionPane.showMessageDialog(null, "搜尋過程發生錯誤", "錯誤", JOptionPane.ERROR_MESSAGE);
-			}
-		};
-
 		btnSearch.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				btnSearch.setEnabled(false);
-				SwingUtilities.invokeLater(doFetchWork);
+				Thread doFetchWork = new Thread(() -> {
+					HashSet<String> completeSet = new HashSet<String>();
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+
+					String strSearchUrl = "http://search.appledaily.com.tw/appledaily/search";
+					String strSdate = sdf.format(datetimeStart.getValue());
+					String strEdate = sdf.format(datetimeEnd.getValue());
+
+					// first search step.
+					org.jsoup.Connection firstConn;
+					Document firstDoc;
+					firstConn = Jsoup.connect(strSearchUrl);
+					firstConn.data("searchMode", "Adv").data("searchType", "text").data("select", "AND");
+					firstConn.data("querystrA", textSearchKeyword.getText()).data("sdate", strSdate).data("edate",
+							strEdate);
+
+					try {
+						PreparedStatement stat = connector.getConnection().prepareStatement(
+								"INSERT INTO `appledaily`(`url_guid`, `url`, `date`, `title`, `content`, `keyword`) VALUES(?, ?, ?, ?, ?, ?)");
+						firstDoc = firstConn.post();
+
+						int totalCount = Integer
+								.parseInt(firstDoc.select("#pageNumberSubmit input[name=totalpage]").first().val());
+						progressStatus.setMaximum(totalCount);
+
+						btnSearch.setEnabled(false);
+						for (Element link : firstDoc.select("#result>li")) {
+							String strUrl = link.select("h2 a").first().absUrl("href");
+							String strGUID = UUID.nameUUIDFromBytes(strUrl.getBytes()).toString();
+
+							if (!guidSet.contains(strGUID)) {
+								Thread.sleep(500);
+								Document newsDoc = Jsoup.connect(strUrl).get();
+
+								stat.setString(1, strGUID);
+								stat.setString(2, strUrl);
+								stat.setString(3, link.select("time").text());
+								stat.setString(4, link.select("h2 a").text().trim());
+								stat.setString(5, newsDoc.body().text().trim());
+								stat.setString(6, textSearchKeyword.getText());
+
+								stat.executeUpdate();
+								guidSet.add(strGUID);
+							}
+
+							completeSet.add(strGUID);
+							progressStatus.setValue(completeSet.size());
+							// System.out.printf("\r目前進度： %d / %d 篇",
+							// completeSet.size(), totalCount);
+						}
+
+						int pageIndex = 2;
+						Document resultPageDoc = firstDoc;
+						while (resultPageDoc.select("#pageNumberSubmit ol#result>li").size() == 10) {
+							org.jsoup.Connection pageConn = Jsoup.connect(strSearchUrl);
+							resultPageDoc.select("#pageNumberSubmit input")
+									.forEach(input -> pageConn.data(input.attr("name"), input.val()));
+							pageConn.data("page", Integer.toString(pageIndex++));
+
+							resultPageDoc = pageConn.post();
+
+							for (Element link : resultPageDoc.select("#result>li")) {
+								String strUrl = link.select("h2 a").first().absUrl("href");
+								String strGUID = UUID.nameUUIDFromBytes(strUrl.getBytes()).toString();
+
+								if (!guidSet.contains(strGUID)) {
+									Thread.sleep(500);
+									Document newsDoc = Jsoup.connect(strUrl).get();
+
+									stat.setString(1, strGUID);
+									stat.setString(2, strUrl);
+									stat.setString(3, link.select("time").text());
+									stat.setString(4, link.select("h2 a").text().trim());
+									stat.setString(5, newsDoc.body().text().trim());
+									stat.setString(6, textSearchKeyword.getText());
+
+									stat.executeUpdate();
+									guidSet.add(strGUID);
+								}
+
+								completeSet.add(strGUID);
+								progressStatus.setValue(completeSet.size());
+								// System.out.printf("\r目前進度： %d / %d 篇",
+								// completeSet.size(), totalCount);
+							}
+						}
+
+						JOptionPane.showMessageDialog(null, "資料下載完成！", "訊息", JOptionPane.INFORMATION_MESSAGE);
+						stat.close();
+						btnSearch.setEnabled(true);
+					} catch (IOException | InterruptedException | SQLException e1) {
+						e1.printStackTrace();
+						JOptionPane.showMessageDialog(null, "搜尋過程發生錯誤", "錯誤", JOptionPane.ERROR_MESSAGE);
+					}
+				});
+
+				doFetchWork.start();
 			}
 		});
 		jLabel6 = new javax.swing.JLabel();
@@ -297,10 +301,10 @@ public class AppWindow extends javax.swing.JFrame {
 		progressStatus.setToolTipText("");
 		progressStatus.setValue(0);
 		progressStatus.setStringPainted(true);
-		progressStatus.setVisible(false);
+		// progressStatus.setVisible(false);
 
 		jLabel8.setText("寫入資料庫-完成進度：");
-		jLabel8.setVisible(false);
+		// jLabel8.setVisible(false);
 
 		javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
 		jPanel2.setLayout(jPanel2Layout);
