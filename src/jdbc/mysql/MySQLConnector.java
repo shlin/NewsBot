@@ -13,6 +13,12 @@ public class MySQLConnector implements IMySQLConnector {
 	private String strDatabase;
 	private String strConnectionUrl;
 
+	/**
+	 * @param host
+	 * @param username
+	 * @param password
+	 * @param database
+	 */
 	public MySQLConnector(String host, String username, String password, String database) {
 		this.strHost = host;
 		this.strUsername = username;
