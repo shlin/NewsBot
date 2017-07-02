@@ -71,6 +71,6 @@ public class NewsBean implements Serializable, Comparable<NewsBean> {
 		int o1Date = Integer.parseInt(this.date);
 		int o2Date = Integer.parseInt(o.getDate());
 
-		return o1Date == o2Date ? 0 : o1Date < o2Date ? -1 : 1;
+		return o1Date == o2Date ? 0 : o1Date > o2Date ? -1 : 1;
 	}
 }
