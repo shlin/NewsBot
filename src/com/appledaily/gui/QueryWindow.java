@@ -91,7 +91,7 @@ public class QueryWindow {
 	 */
 	private void initialize() {
 		frmDbQuery = new JFrame();
-		frmDbQuery.setTitle("DB Query");
+		frmDbQuery.setTitle("蘋果日報新聞爬蟲-資料庫查詢");
 		frmDbQuery.setBounds(100, 100, 800, 600);
 		frmDbQuery.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frmDbQuery.getContentPane()
