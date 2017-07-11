@@ -67,6 +67,23 @@ public class QueryWindow {
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
+		try {
+			for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+				if ("Nimbus".equals(info.getName())) {
+					javax.swing.UIManager.setLookAndFeel(info.getClassName());
+					break;
+				}
+			}
+		} catch (ClassNotFoundException ex) {
+			java.util.logging.Logger.getLogger(AppWindow.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+		} catch (InstantiationException ex) {
+			java.util.logging.Logger.getLogger(AppWindow.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+		} catch (IllegalAccessException ex) {
+			java.util.logging.Logger.getLogger(AppWindow.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+		} catch (javax.swing.UnsupportedLookAndFeelException ex) {
+			java.util.logging.Logger.getLogger(AppWindow.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+		}
+
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
@@ -95,35 +112,18 @@ public class QueryWindow {
 		frmDbQuery.setBounds(100, 100, 800, 600);
 		frmDbQuery.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frmDbQuery.getContentPane()
-				.setLayout(new FormLayout(new ColumnSpec[] {
-				ColumnSpec.decode("10px"),
-				ColumnSpec.decode("right:110px"),
-				ColumnSpec.decode("left:150px"),
-				ColumnSpec.decode("10px"),
-				ColumnSpec.decode("450px:grow"),
-				ColumnSpec.decode("10px"),},
-			new RowSpec[] {
-				FormSpecs.RELATED_GAP_ROWSPEC,
-				FormSpecs.DEFAULT_ROWSPEC,
-				FormSpecs.RELATED_GAP_ROWSPEC,
-				FormSpecs.DEFAULT_ROWSPEC,
-				FormSpecs.RELATED_GAP_ROWSPEC,
-				FormSpecs.DEFAULT_ROWSPEC,
-				FormSpecs.RELATED_GAP_ROWSPEC,
-				FormSpecs.DEFAULT_ROWSPEC,
-				FormSpecs.RELATED_GAP_ROWSPEC,
-				FormSpecs.DEFAULT_ROWSPEC,
-				FormSpecs.RELATED_GAP_ROWSPEC,
-				FormSpecs.DEFAULT_ROWSPEC,
-				FormSpecs.RELATED_GAP_ROWSPEC,
-				FormSpecs.DEFAULT_ROWSPEC,
-				FormSpecs.RELATED_GAP_ROWSPEC,
-				FormSpecs.DEFAULT_ROWSPEC,
-				FormSpecs.RELATED_GAP_ROWSPEC,
-				FormSpecs.DEFAULT_ROWSPEC,
-				FormSpecs.RELATED_GAP_ROWSPEC,
-				RowSpec.decode("default:grow"),
-				FormSpecs.RELATED_GAP_ROWSPEC,}));
+				.setLayout(new FormLayout(
+						new ColumnSpec[] { ColumnSpec.decode("10px"), ColumnSpec.decode("right:110px"),
+								ColumnSpec.decode("left:150px"), ColumnSpec.decode("10px"),
+								ColumnSpec.decode("450px:grow"), ColumnSpec.decode("10px"), },
+						new RowSpec[] { FormSpecs.RELATED_GAP_ROWSPEC, FormSpecs.DEFAULT_ROWSPEC,
+								FormSpecs.RELATED_GAP_ROWSPEC, FormSpecs.DEFAULT_ROWSPEC, FormSpecs.RELATED_GAP_ROWSPEC,
+								FormSpecs.DEFAULT_ROWSPEC, FormSpecs.RELATED_GAP_ROWSPEC, FormSpecs.DEFAULT_ROWSPEC,
+								FormSpecs.RELATED_GAP_ROWSPEC, FormSpecs.DEFAULT_ROWSPEC, FormSpecs.RELATED_GAP_ROWSPEC,
+								FormSpecs.DEFAULT_ROWSPEC, FormSpecs.RELATED_GAP_ROWSPEC, FormSpecs.DEFAULT_ROWSPEC,
+								FormSpecs.RELATED_GAP_ROWSPEC, FormSpecs.DEFAULT_ROWSPEC, FormSpecs.RELATED_GAP_ROWSPEC,
+								FormSpecs.DEFAULT_ROWSPEC, FormSpecs.RELATED_GAP_ROWSPEC,
+								RowSpec.decode("default:grow"), FormSpecs.RELATED_GAP_ROWSPEC, }));
 
 		JLabel lblMysql = new JLabel("MySQL 伺服器：");
 		frmDbQuery.getContentPane().add(lblMysql, "2, 2");
@@ -192,6 +192,7 @@ public class QueryWindow {
 			public void mouseClicked(MouseEvent e) {
 				if (button.isEnabled()) {
 					button.setEnabled(false);
+					resultListModel = new DefaultListModel<String>();
 					new Thread(dbQueryTask).start();
 				}
 			}
@@ -203,8 +204,6 @@ public class QueryWindow {
 
 		resultCount = new JLabel("共 0 筆");
 		frmDbQuery.getContentPane().add(resultCount, "3, 18, center, default");
-
-		resultListModel = new DefaultListModel<String>();
 
 		resultList = new JList<String>();
 		resultList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
